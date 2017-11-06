@@ -19,37 +19,31 @@ namespace WeatherServices
         public Stream GetStream(string location)
         {
             Task<Stream> stream = request.GetStreamAsync(string.Format(WeatherAuthenticator.Url, location));
-            stream.RunSynchronously();
+            stream.Wait();
             return stream.Result;
         }
 
-        private string Parse(XmlReader reader, string name)
+        private string Parse(string s, string name)
         {
-            string[] path = name.Split('/');
-
-            for (int i = 0; i < path.Length; i++)
-            {
-                reader.ReadToDescendant(path[i]);
-                if (i + 1 == path.Length)
-                    return reader.Value;
-            }
-
-            return null;
+            XmlDocument doc = new XmlDocument();
+            doc.LoadXml(s);
+            XmlNode node = doc.SelectSingleNode(name);
+            return node.InnerText;
         }
 
-        public ImmediateWeather GetWeather(Stream response)
+        public ImmediateWeather GetWeather(Stream s)
         {
-
-            XmlReader reader = XmlReader.Create(response);
             ImmediateWeather weather = new ImmediateWeather();
+            StreamReader sr = new StreamReader(s);
+            string response = sr.ReadToEnd();
 
-            weather.temp = decimal.Parse(Parse(reader, "root/current/temp_f"));
-            weather.windSpeed = decimal.Parse(Parse(reader, "root/current/wind_mph"));
-            weather.windDir = Parse(reader, "root/current/wind_dir");
-            weather.clouds = Parse(reader, "root/current/condition/text");
-            weather.city = Parse(reader, "root/location/name");
-            weather.state = Parse(reader, "root/location/region");
-            weather.country = Parse(reader, "root/location/country");
+            weather.temp = decimal.Parse(Parse(response, "/root/current/temp_f"));
+            weather.windSpeed = decimal.Parse(Parse(response, "/root/current/wind_mph"));
+            weather.windDir = Parse(response, "/root/current/wind_dir");
+            weather.clouds = Parse(response, "/root/current/condition/text");
+            weather.city = Parse(response, "/root/location/name");
+            weather.state = Parse(response, "/root/location/region");
+            weather.country = Parse(response, "/root/location/country");
 
             return weather;
         }
